@@ -2,6 +2,7 @@ services:
   - type: web
     name: fuwa-hitsuji-mancala
     runtime: node
+    plan: free
     buildCommand: npm ci && npm run build
     startCommand: npm run start --workspace @fuwa-hitsuji/server
     healthCheckPath: /health
