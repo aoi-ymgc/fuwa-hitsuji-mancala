@@ -12,7 +12,7 @@
     "dev:server": "npm run dev --workspace @fuwa-hitsuji/server",
     "dev:web": "npm run dev --workspace @fuwa-hitsuji/web",
     "start": "npm run start --workspace @fuwa-hitsuji/server",
-    "build": "npm run build --workspace @fuwa-hitsuji/shared && npm run build --workspace @fuwa-hitsuji/game-core && npm exec --workspace @fuwa-hitsuji/web -- vite build && npm run build --workspace @fuwa-hitsuji/server",
+    "build": "npm run build --workspace @fuwa-hitsuji/shared && npm run build --workspace @fuwa-hitsuji/game-core && npm run build --workspace @fuwa-hitsuji/web && npm run build --workspace @fuwa-hitsuji/server",
     "test": "npm run build --workspace @fuwa-hitsuji/shared && npm run build --workspace @fuwa-hitsuji/game-core && npm run test --workspace @fuwa-hitsuji/game-core && npm run test --workspace @fuwa-hitsuji/web && npm run test --workspace @fuwa-hitsuji/server",
     "typecheck": "npm run build --workspace @fuwa-hitsuji/shared && npm run typecheck --workspace @fuwa-hitsuji/shared && npm run build --workspace @fuwa-hitsuji/game-core && npm run typecheck --workspace @fuwa-hitsuji/game-core && npx tsc -p tsconfig.web.typecheck.json --noEmit && npx tsc -p apps/web/tsconfig.node.json --noEmit && npm run typecheck --workspace @fuwa-hitsuji/server"
   },

@@ -38,12 +38,19 @@ export function createAppServer(
     response.json({ ok: true });
   });
 
-  const webDist = resolve(dirname(fileURLToPath(import.meta.url)), '../../web/dist');
-  if (existsSync(webDist)) {
+  const webDist = [
+    process.env.WEB_DIST_PATH,
+    resolve(dirname(fileURLToPath(import.meta.url)), '../../web/dist'),
+    resolve(process.cwd(), 'apps/web/dist'),
+    resolve(process.cwd(), '../web/dist'),
+  ].find((candidate): candidate is string => candidate !== undefined && existsSync(resolve(candidate, 'index.html')));
+  if (webDist !== undefined) {
     app.use(express.static(webDist));
     app.get('*', (_request, response) => {
       response.sendFile(resolve(webDist, 'index.html'));
     });
+  } else {
+    console.error('Web build was not found. Run the web workspace build before starting the server.');
   }
 
   io.on('connection', (socket) => registerSocketHandlers(socket, roomManager));

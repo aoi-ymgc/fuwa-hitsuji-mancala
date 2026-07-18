@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
+import { QRCodeSVG } from 'qrcode.react';
 import { create } from 'zustand';
 import type { ClientToServerEvents, GameMoveResult, InvalidMovePayload, MoveStep, PlayerConnectionPayload, PlayerIndex, RoomJoinedPayload, ServerToClientEvents, StateUpdatePayload } from '@fuwa-hitsuji/shared';
 import { applyVisualStep, canPickPit, copyBoard, type AppScreen, type Board, type ConnectionState, type RoomSnapshot } from './game';
@@ -142,8 +143,8 @@ function Join({ initialCode, onBack, onJoin }: { initialCode: string; onBack: ()
   return <main className="panel-page"><button className="back-button" onClick={onBack}>‹ 戻る</button><section className="form-card">{notice && <div className="notice" role="status">{notice}</div>}<span className="card-icon">✉</span><h1>ルームに参加</h1><p>相手から届いた6文字のコードを入力してね。</p><label htmlFor="room-code">ルームコード</label><input id="room-code" inputMode="numeric" pattern="[0-9]*" autoComplete="one-time-code" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} placeholder="例：123456" /><button className="primary-button" disabled={!/^\d{6}$/.test(code)} onClick={() => onJoin(code)}>参加する <span>→</span></button></section></main>;
 }
 
-function Waiting({ roomId, onCopy, copied, onLeave }: { roomId: string; onCopy: () => void; copied: boolean; onLeave: () => void }) {
-  return <main className="panel-page"><section className="waiting-card"><img className="waiting-image" src="/assets/waiting-room.png" alt="相手を待つふわっとマンカラのひつじ" /><p className="eyebrow">あとひとり</p><h1>相手を待っています</h1><p>このリンクかコードを送って、<br />一緒に遊ぶ相手を招待しよう。</p><div className="invite-code"><span>ルームコード</span><strong>{roomId}</strong></div><button className="primary-button" onClick={onCopy}>{copied ? 'コピーしました！' : '招待リンクをコピー'}</button><button className="text-button" onClick={onLeave}>ホームへ戻る</button></section></main>;
+function Waiting({ roomId, inviteUrl, onCopy, copied, onLeave }: { roomId: string; inviteUrl: string; onCopy: () => void; copied: boolean; onLeave: () => void }) {
+  return <main className="panel-page"><section className="waiting-card"><img className="waiting-image" src="/assets/waiting-room.png" alt="相手を待つふわっとマンカラのひつじ" /><p className="eyebrow">あとひとり</p><h1>相手を待っています</h1><p>このリンクかコードを送って、<br />一緒に遊ぶ相手を招待しよう。</p><div className="invite-code"><span>ルームコード</span><strong>{roomId}</strong></div><figure className="invite-qr"><QRCodeSVG value={inviteUrl} size={168} level="M" bgColor="#fffaf0" fgColor="#3f624d" title="招待リンクのQRコード" /><figcaption>相手のスマホで読み取ってね</figcaption></figure><button className="primary-button" onClick={onCopy}>{copied ? 'コピーしました！' : '招待リンクをコピー'}</button><button className="text-button" onClick={onLeave}>ホームへ戻る</button></section></main>;
 }
 
 function Pit({ count, top, selected, onClick }: { count: number; top: boolean; selected: boolean; onClick: () => void }) {
@@ -192,8 +193,9 @@ export function App() {
   const createRoom = () => { set({ pending: true, notice: '' }); socket.current?.emit('create_room', {}); };
   const joinRoom = (roomCode: string) => { set({ pending: true, notice: '' }); socket.current?.emit('join_room', { roomCode }); };
   const move = (pitIndex: number) => { if (!room) return; set({ pending: true, notice: '' }); socket.current?.emit('make_move', { pitIndex, revision: room.revision, moveId: crypto.randomUUID() }); };
-  const copyInvite = async () => { if (!room) return; const url = `${window.location.origin}${window.location.pathname}?room=${room.roomCode}`; try { await navigator.clipboard.writeText(url); } catch { window.prompt('このリンクをコピーして送ってね', url); } setCopied(true); window.setTimeout(() => setCopied(false), 1800); };
+  const inviteUrl = room ? `${window.location.origin}${window.location.pathname}?room=${room.roomCode}` : '';
+  const copyInvite = async () => { if (!room) return; try { await navigator.clipboard.writeText(inviteUrl); } catch { window.prompt('このリンクをコピーして送ってね', inviteUrl); } setCopied(true); window.setTimeout(() => setCopied(false), 1800); };
   const rematch = () => { socket.current?.emit('rematch_request'); set({ notice: '相手の返事を待っています。' }); };
   const leave = () => { socket.current?.emit('leave_room', room ? { roomCode: room.roomCode } : undefined); clearRoomSession(); home(); };
-  return <div className="app-shell"><Header onHome={homeFromActiveRoom} />{screen === 'home' && <Home onCreate={createRoom} onJoin={() => set({ screen: 'join' })} onRules={() => set({ screen: 'rules' })} />}{screen === 'join' && <Join initialCode={urlRoom} onBack={home} onJoin={joinRoom} />}{screen === 'rules' && <Rules onBack={home} />}{screen === 'waiting' && <Waiting roomId={room?.roomCode ?? '------'} onCopy={copyInvite} copied={copied} onLeave={leave} />}{screen === 'game' && <Game onMove={move} onLeave={leave} />}{screen === 'result' && <Result onRematch={rematch} onHome={homeFromActiveRoom} />}</div>;
+  return <div className="app-shell"><Header onHome={homeFromActiveRoom} />{screen === 'home' && <Home onCreate={createRoom} onJoin={() => set({ screen: 'join' })} onRules={() => set({ screen: 'rules' })} />}{screen === 'join' && <Join initialCode={urlRoom} onBack={home} onJoin={joinRoom} />}{screen === 'rules' && <Rules onBack={home} />}{screen === 'waiting' && <Waiting roomId={room?.roomCode ?? '------'} inviteUrl={inviteUrl} onCopy={copyInvite} copied={copied} onLeave={leave} />}{screen === 'game' && <Game onMove={move} onLeave={leave} />}{screen === 'result' && <Result onRematch={rematch} onHome={homeFromActiveRoom} />}</div>;
 }
