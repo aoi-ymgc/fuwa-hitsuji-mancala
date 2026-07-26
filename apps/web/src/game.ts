@@ -2,6 +2,7 @@ import type { BoardPits, MoveStep, PlayerIndex, RoomPublicState } from '@fuwa-hi
 
 export type AppScreen = 'home' | 'join' | 'rules' | 'waiting' | 'game' | 'result';
 export type ConnectionState = 'connecting' | 'connected' | 'reconnecting' | 'offline';
+export type GamePhase = 'idle' | 'animating' | 'specialEvent' | 'waitingOpponent';
 
 export type Board = { pits: BoardPits; stores: [number, number] };
 export type RoomSnapshot = RoomPublicState;
@@ -13,6 +14,17 @@ export function canPickPit(state: RoomSnapshot | null, myPlayer: PlayerIndex | n
 
 export function copyBoard(board: Board): Board {
   return { pits: [[...board.pits[0]], [...board.pits[1]]], stores: [...board.stores] as [number, number] };
+}
+
+export function phaseForRoom(state: RoomSnapshot | null, myPlayer: PlayerIndex | null): GamePhase {
+  if (!state?.game || myPlayer === null || state.status !== 'playing') return 'waitingOpponent';
+  const someoneDisconnected = state.players.some((entry) => entry !== null && !entry.connected);
+  return !someoneDisconnected && state.game.currentPlayer === myPlayer ? 'idle' : 'waitingOpponent';
+}
+
+export function screenForRoom(state: RoomSnapshot): AppScreen {
+  if (state.status === 'waiting') return 'waiting';
+  return state.status === 'finished' ? 'result' : 'game';
 }
 
 /** Applies the same incremental board changes described by the server's MoveStep. */

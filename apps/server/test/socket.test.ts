@@ -27,11 +27,8 @@ afterEach(async () => {
 });
 
 describe('Socket.IO room play', () => {
-  it('starts a two-player room and rejects duplicate and stale moves', async () => {
-    activeServer = createAppServer('http://example.test');
-    await new Promise<void>((resolve) => activeServer?.httpServer.listen(0, () => resolve()));
-    const address = activeServer.httpServer.address() as AddressInfo;
-    const url = `http://127.0.0.1:${address.port}`;
+  it.each([0, 1] as const)('starts with the picked player (%i) and rejects invalid turns', async (startingPlayer) => {
+    const url = await startServer({ startingPlayerPicker: () => startingPlayer });
     const playerOne = await createClient(url);
     const playerTwo = await createClient(url);
 
@@ -50,23 +47,26 @@ describe('Socket.IO room play', () => {
     expect(guest.playerIndex).toBe(1);
     expect(startedByHost.state.status).toBe('playing');
     expect(startedByHost.state.revision).toBe(startedByGuest.state.revision);
+    expect(startedByHost.state.game?.currentPlayer).toBe(startingPlayer);
 
-    const outOfTurn = onceInvalidMove(playerTwo);
-    playerTwo.emit('make_move', { pitIndex: 0, revision: startedByHost.state.revision, moveId: 'move-0000' });
+    const waitingPlayer = startingPlayer === 0 ? playerTwo : playerOne;
+    const activePlayer = startingPlayer === 0 ? playerOne : playerTwo;
+    const outOfTurn = onceInvalidMove(waitingPlayer);
+    waitingPlayer.emit('make_move', { pitIndex: 0, revision: startedByHost.state.revision, moveId: 'move-0000' });
     await expect(outOfTurn).resolves.toMatchObject({ reason: 'not_your_turn' });
 
     const update = onceStateUpdate(playerOne);
-    playerOne.emit('make_move', { pitIndex: 0, revision: startedByHost.state.revision, moveId: 'move-0001' });
+    activePlayer.emit('make_move', { pitIndex: 0, revision: startedByHost.state.revision, moveId: 'move-0001' });
     const accepted = await update;
     expect(accepted.moveResult?.steps[0]?.type).toBe('pickup');
     expect(accepted.state.revision).toBe(startedByHost.state.revision + 1);
 
-    const duplicate = onceInvalidMove(playerOne);
-    playerOne.emit('make_move', { pitIndex: 0, revision: startedByHost.state.revision, moveId: 'move-0001' });
+    const duplicate = onceInvalidMove(activePlayer);
+    activePlayer.emit('make_move', { pitIndex: 0, revision: startedByHost.state.revision, moveId: 'move-0001' });
     await expect(duplicate).resolves.toMatchObject({ reason: 'duplicate_move' });
 
-    const stale = onceInvalidMove(playerTwo);
-    playerTwo.emit('make_move', { pitIndex: 0, revision: startedByHost.state.revision, moveId: 'move-0002' });
+    const stale = onceInvalidMove(waitingPlayer);
+    waitingPlayer.emit('make_move', { pitIndex: 0, revision: startedByHost.state.revision, moveId: 'move-0002' });
     await expect(stale).resolves.toMatchObject({ reason: 'stale_revision' });
   });
 
@@ -127,7 +127,7 @@ describe('Socket.IO room play', () => {
   });
 
   it('opens an expired player slot and alternates the rematch starting player', async () => {
-    const url = await startServer(10);
+    const url = await startServer({ reconnectWindowMs: 10, startingPlayerPicker: () => 0 });
     const playerOne = await createClient(url);
     const playerTwo = await createClient(url);
     const host = await createAndJoinRoom(playerOne, playerTwo);
@@ -158,8 +158,8 @@ describe('Socket.IO room play', () => {
   });
 });
 
-async function startServer(reconnectWindowMs?: number): Promise<string> {
-  activeServer = createAppServer('http://example.test', reconnectWindowMs === undefined ? {} : { reconnectWindowMs });
+async function startServer(options: Parameters<typeof createAppServer>[1] = {}): Promise<string> {
+  activeServer = createAppServer('http://example.test', options);
   await new Promise<void>((resolve) => activeServer?.httpServer.listen(0, () => resolve()));
   const address = activeServer.httpServer.address() as AddressInfo;
   return `http://127.0.0.1:${address.port}`;

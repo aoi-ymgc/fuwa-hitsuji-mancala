@@ -21,7 +21,7 @@ export interface AppServer {
 
 export function createAppServer(
   inviteBaseUrl = process.env.PUBLIC_BASE_URL ?? 'http://localhost:5173',
-  roomManagerOptions: Pick<RoomManagerOptions, 'reconnectWindowMs'> = {},
+  roomManagerOptions: Pick<RoomManagerOptions, 'reconnectWindowMs' | 'startingPlayerPicker'> = {},
 ): AppServer {
   const app = express();
   const httpServer = createServer(app);

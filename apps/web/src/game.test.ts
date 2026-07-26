@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MoveStep } from '@fuwa-hitsuji/shared';
-import { applyVisualStep, canPickPit, demoBoard, type Board } from './game';
+import { applyVisualStep, canPickPit, demoBoard, phaseForRoom, screenForRoom, type Board } from './game';
 
 const state = { roomCode: 'SHEEP', status: 'playing' as const, players: [null, null] as [null, null], game: { ...demoBoard, currentPlayer: 0 as const, status: 'playing' as const, winner: null }, revision: 0, round: 1, rematchRequestedBy: [] as (0 | 1)[] };
 
@@ -9,6 +9,17 @@ describe('canPickPit', () => {
     expect(canPickPit(state, 0, 0, false)).toBe(true);
     expect(canPickPit(state, 1, 0, false)).toBe(false);
     expect(canPickPit({ ...state, game: { ...state.game, pits: [[0, 4, 4, 4, 4, 4], [4, 4, 4, 4, 4, 4]] } }, 0, 0, false)).toBe(false);
+  });
+});
+
+describe('client presentation state', () => {
+  it('手番と待機状態から操作フェーズを決める', () => {
+    expect(phaseForRoom(state, 0)).toBe('idle');
+    expect(phaseForRoom(state, 1)).toBe('waitingOpponent');
+  });
+
+  it('waiting の state_update は待機画面へ戻す', () => {
+    expect(screenForRoom({ ...state, status: 'waiting', game: null })).toBe('waiting');
   });
 });
 

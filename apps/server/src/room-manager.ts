@@ -61,6 +61,8 @@ export interface RoomManagerOptions {
   onEvent?: (event: RoomEvent) => void;
   inviteBaseUrl?: string;
   reconnectWindowMs?: number;
+  /** Used by tests to make the first player deterministic. */
+  startingPlayerPicker?: () => PlayerIndex;
 }
 
 export class RoomManager {
@@ -69,11 +71,13 @@ export class RoomManager {
   private readonly onEvent: (event: RoomEvent) => void;
   private readonly inviteBaseUrl: string;
   private readonly reconnectWindowMs: number;
+  private readonly startingPlayerPicker: () => PlayerIndex;
 
   public constructor(options: RoomManagerOptions = {}) {
     this.onEvent = options.onEvent ?? (() => undefined);
     this.inviteBaseUrl = options.inviteBaseUrl ?? 'http://localhost:5173';
     this.reconnectWindowMs = options.reconnectWindowMs ?? RECONNECT_WINDOW_MS;
+    this.startingPlayerPicker = options.startingPlayerPicker ?? (() => randomInt(2) as PlayerIndex);
   }
 
   public createRoom(socketId: string, payload: CreateRoomPayload): RoomJoinedPayload {
@@ -86,7 +90,7 @@ export class RoomManager {
       game: null,
       revision: 0,
       round: 0,
-      startingPlayer: 0,
+      startingPlayer: this.startingPlayerPicker(),
       rematchRequestedBy: new Set<PlayerIndex>(),
       processedMoveIds: new Set<string>(),
     };
