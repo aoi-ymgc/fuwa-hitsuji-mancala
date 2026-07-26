@@ -195,10 +195,14 @@ function useSocket() {
         .catch(() => applyRoom(payload.state, undefined, generation));
     });
     client.on('player_disconnected', (payload: PlayerConnectionPayload) => {
+      const activeRoom = useGame.getState().room;
+      if (!activeRoom || activeRoom.roomCode !== payload.state.roomCode) return;
       cancelAnimations();
       set({ room: payload.state, phase: 'waitingOpponent', notice: '相手の通信が途切れました。復帰を待っています。' });
     });
     client.on('player_reconnected', (payload: PlayerConnectionPayload) => {
+      const activeRoom = useGame.getState().room;
+      if (!activeRoom || activeRoom.roomCode !== payload.state.roomCode) return;
       const current = useGame.getState();
       const phase = current.phase === 'animating' || current.phase === 'specialEvent' ? current.phase : phaseForRoom(payload.state, current.player);
       set({ room: payload.state, phase, notice: '相手が戻りました。対戦を再開できます。' });
