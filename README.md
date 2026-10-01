@@ -2,6 +2,8 @@
 
 「ふわっとひつじ」と一緒に遊ぶ、スマホ優先の2人用オンライン・カラハです。ルームを作り、6桁コードまたは招待URLを相手に送るだけで対戦できます。
 
+公開サイト: https://fuwa-hitsuji-mancala.onrender.com/
+
 ## 実装済み機能
 
 - 2人用オンライン対戦（Socket.IO、サーバー権威型）
@@ -29,7 +31,7 @@
 必要環境は Node.js 20以上、npm 10以上です。
 
 ```powershell
-cd C:\Codex_aoiro\02_Webサイト制作\fuwa-hitsuji-mancala
+cd fuwa-hitsuji-mancala
 npm.cmd install
 ```
 
