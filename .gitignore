@@ -6,3 +6,12 @@ dist/
 !.env.example
 coverage/
 *.log
+.cache/
+.wrangler/
+dist-cf/
+.dev.vars*
+!apps/web/.env.cloudflare
+dist-cloudflare/
+.npm-cache/
+.npm-logs/
+.seed-cache.cjs

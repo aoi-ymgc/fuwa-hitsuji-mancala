@@ -62,6 +62,8 @@ npm.cmd start
 
 ## デプロイ
 
+Cloudflare Workers + SQLite-backed Durable Objects版を追加しています。Render版は従来のコマンドで引き続き利用できます。Cloudflare版の起動・無料枠・検証・制限は[Cloudflare Workers版](docs/cloudflare-workers.md)を参照してください。
+
 `render.yaml` はRenderのNode Web Service向けです。リポジトリを接続し、Blueprintを作成してください。
 
 - Build Command: `npm install && npm run build`
@@ -132,3 +134,24 @@ npm.cmd run build
 5. CPU対戦、ヒント、手番タイマー
 
 描き下ろし素材と追加制作指示は [docs/illustration-production.md](docs/illustration-production.md) を参照してください。
+
+## Cloudflare Workers版（Renderと並行公開）
+
+公開URL: https://fuwa-hitsuji-mancala-cf.aoiroymgc.workers.dev/
+
+Cloudflare Workers の静的アセット配信と、SQLite-backed Durable Objects の部屋管理を利用します。Cloudflare版はブラウザ標準のWebSocketを使い、既存のRender版はSocket.IOを使い続けます。元のRenderサービスや `render.yaml` は変更しません。
+
+```powershell
+npm.cmd ci
+npm.cmd run typecheck
+npm.cmd test
+npm.cmd run build:cloudflare
+npm.cmd run typecheck:cloudflare
+npm.cmd run test:cloudflare
+npm.cmd run dry-run:cloudflare
+.\node_modules\.bin\wrangler.cmd deploy --config wrangler.jsonc
+```
+
+ローカル対戦の実通信確認は `wrangler dev --config wrangler.jsonc --port 8787` を起動後、`node apps/worker/test/cloudflare-smoke.cjs` で実施できます。公開環境を検証するときは PowerShell で `$env:SMOKE_ORIGIN='https://fuwa-hitsuji-mancala-cf.aoiroymgc.workers.dev'` を設定して同じスクリプトを実行します。テストで対戦ルームが1つ作成されます。
+
+現在のCloudflare公開はWranglerによる手動デプロイです。GitHubからの自動デプロイは未設定です。Render側を停止する場合は、既存の招待URLを利用している人への影響を先に確認してください。

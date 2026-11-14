@@ -1,0 +1,22 @@
+{
+  "name": "@fuwa-hitsuji/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --local --config ../../wrangler.jsonc --persist-to .wrangler/state",
+    "build": "wrangler deploy --dry-run --config ../../wrangler.jsonc --outdir .wrangler/dry-run",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@fuwa-hitsuji/game-core": "*",
+    "@fuwa-hitsuji/shared": "*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "4.20260515.1",
+    "esbuild": "0.27.3",
+    "miniflare": "4.20260515.0",
+    "wrangler": "4.92.0"
+  }
+}

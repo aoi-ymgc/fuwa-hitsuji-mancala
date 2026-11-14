@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { io, type Socket } from 'socket.io-client';
+import { createConnection, type GameConnection } from './connection';
 import { QRCodeSVG } from 'qrcode.react';
 import { create } from 'zustand';
-import type { ClientToServerEvents, GameMoveResult, InvalidMovePayload, MoveStep, PlayerConnectionPayload, PlayerIndex, RoomJoinedPayload, ServerToClientEvents, SowTarget, StateUpdatePayload } from '@fuwa-hitsuji/shared';
+import type { GameMoveResult, InvalidMovePayload, MoveStep, PlayerConnectionPayload, PlayerIndex, RoomJoinedPayload, SowTarget, StateUpdatePayload } from '@fuwa-hitsuji/shared';
 import { ANIMATION_TIMING, prefersReducedMotion, stoneMoveDuration, waitForAnimation } from './animation';
 import { applyVisualStep, canPickPit, copyBoard, phaseForRoom, screenForRoom, type AppScreen, type Board, type ConnectionState, type GamePhase, type RoomSnapshot } from './game';
 
@@ -77,7 +77,7 @@ function startingPlayerNotice(state: RoomSnapshot, player: PlayerIndex | null) {
 }
 
 function useSocket() {
-  const socket = useRef<Socket<ServerToClientEvents, ClientToServerEvents> | null>(null);
+  const socket = useRef<GameConnection | null>(null);
   const animationQueue = useRef(Promise.resolve());
   const animationGeneration = useRef(0);
   const set = useGame((s) => s.set);
@@ -87,7 +87,7 @@ function useSocket() {
   };
 
   useEffect(() => {
-    const client: Socket<ServerToClientEvents, ClientToServerEvents> = io(import.meta.env.VITE_SOCKET_URL ?? window.location.origin, { autoConnect: false, auth: { token: getToken() } });
+    const client = createConnection(getToken());
     socket.current = client;
     const applyRoom = (room: RoomSnapshot, player = useGame.getState().player, generation?: number) => {
       if (generation !== undefined && generation !== animationGeneration.current) return;
@@ -162,14 +162,15 @@ function useSocket() {
       const inviteCode = new URLSearchParams(window.location.search).get('room')?.trim() ?? '';
       if (roomCode && sessionToken && (!inviteCode || inviteCode === roomCode)) client.emit('reconnect_room', { roomCode, sessionToken });
     });
-    client.on('disconnect', () => { cancelAnimations(); set({ connection: 'offline', phase: 'waitingOpponent' }); });
+    client.on('disconnect', () => { cancelAnimations(); set({ connection: 'offline', phase: 'waitingOpponent', pending: false, animatedBoard: null, movingStone: null, activeZone: null, captureZone: null, specialEvent: null }); });
     client.io.on('reconnect_attempt', () => set({ connection: 'reconnecting', phase: 'waitingOpponent' }));
+    client.on('connect_error', (error) => set({ pending: false, notice: error.message || '通信に接続できません。接続を確認してください。' }));
     client.on('room_joined', (payload: RoomJoinedPayload) => {
       cancelAnimations();
       const room = payload.room; const index = payload.playerIndex;
       localStorage.setItem(roomKey, room.roomCode); localStorage.setItem(sessionKey, payload.sessionToken); sessionStorage.setItem(playerKey, String(index));
       if (new URLSearchParams(window.location.search).has('room')) window.history.replaceState({}, '', window.location.pathname);
-      set({ room, player: index, screen: screenForRoom(room), phase: phaseForRoom(room, index), pending: false, notice: '' });
+      set({ connection: 'connected', room, player: index, screen: screenForRoom(room), phase: phaseForRoom(room, index), pending: false, notice: '', animatedBoard: null, movingStone: null, activeZone: null, captureZone: null, specialEvent: null });
     });
     client.on('start_game', ({ state }) => {
       cancelAnimations();
@@ -198,7 +199,7 @@ function useSocket() {
       const activeRoom = useGame.getState().room;
       if (!activeRoom || activeRoom.roomCode !== payload.state.roomCode) return;
       cancelAnimations();
-      set({ room: payload.state, phase: 'waitingOpponent', notice: '相手の通信が途切れました。復帰を待っています。' });
+      set({ room: payload.state, screen: screenForRoom(payload.state), phase: 'waitingOpponent', pending: false, animatedBoard: null, movingStone: null, activeZone: null, captureZone: null, specialEvent: null, notice: '相手の通信が途切れました。復帰を待っています。' });
     });
     client.on('player_reconnected', (payload: PlayerConnectionPayload) => {
       const activeRoom = useGame.getState().room;
@@ -210,7 +211,10 @@ function useSocket() {
     client.on('invalid_move', (payload: InvalidMovePayload) => {
       const room = payload.state ?? useGame.getState().room;
       const patch: Partial<GameStore> = { pending: false, room, phase: phaseForRoom(room, useGame.getState().player), notice: invalidMoveMessage(payload.reason) };
-      if (payload.reason === 'room_not_found') patch.screen = 'join';
+      if (payload.reason === 'room_not_found') {
+        localStorage.removeItem(roomKey); localStorage.removeItem(sessionKey); sessionStorage.removeItem(playerKey);
+        patch.screen = 'join'; patch.room = null; patch.player = null;
+      }
       set(patch);
     });
     client.connect();
@@ -314,7 +318,7 @@ export function App() {
   const home = () => { cancelAnimations(); window.history.replaceState({}, '', window.location.pathname); set({ screen: 'home', room: null, player: null, notice: '', pending: false, animatedBoard: null, movingStone: null, activeZone: null, captureZone: null, specialEvent: null, phase: 'waitingOpponent' }); };
   const homeFromActiveRoom = () => {
     if (room) {
-      if (room.status !== 'finished') socket.current?.emit('leave_room', { roomCode: room.roomCode });
+      socket.current?.emit('leave_room', { roomCode: room.roomCode });
       clearRoomSession();
     }
     home();

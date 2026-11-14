@@ -12,6 +12,11 @@
     "dev:server": "npm run dev --workspace @fuwa-hitsuji/server",
     "dev:web": "npm run dev --workspace @fuwa-hitsuji/web",
     "start": "npm run start --workspace @fuwa-hitsuji/server",
+    "build:cloudflare": "npm run build --workspace @fuwa-hitsuji/shared && npm run build --workspace @fuwa-hitsuji/game-core && npm run build:cloudflare --workspace @fuwa-hitsuji/web",
+    "dev:cloudflare": "npm run dev --workspace @fuwa-hitsuji/worker",
+    "typecheck:cloudflare": "npm run typecheck --workspace @fuwa-hitsuji/worker",
+    "test:cloudflare": "npm run test --workspace @fuwa-hitsuji/worker",
+    "dry-run:cloudflare": "npm run build --workspace @fuwa-hitsuji/worker",
     "build": "npm run build --workspace @fuwa-hitsuji/shared && npm run build --workspace @fuwa-hitsuji/game-core && npm run build --workspace @fuwa-hitsuji/web && npm run build --workspace @fuwa-hitsuji/server",
     "test": "npm run build --workspace @fuwa-hitsuji/shared && npm run build --workspace @fuwa-hitsuji/game-core && npm run test --workspace @fuwa-hitsuji/game-core && npm run test --workspace @fuwa-hitsuji/web && npm run test --workspace @fuwa-hitsuji/server",
     "typecheck": "npm run build --workspace @fuwa-hitsuji/shared && npm run typecheck --workspace @fuwa-hitsuji/shared && npm run build --workspace @fuwa-hitsuji/game-core && npm run typecheck --workspace @fuwa-hitsuji/game-core && npx tsc -p tsconfig.web.typecheck.json --noEmit && npx tsc -p apps/web/tsconfig.node.json --noEmit && npm run typecheck --workspace @fuwa-hitsuji/server"

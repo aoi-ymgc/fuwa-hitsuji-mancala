@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "fuwa-hitsuji-mancala-cf",
+  "main": "apps/worker/src/index.ts",
+  "compatibility_date": "2026-05-15",
+  "workers_dev": true,
+  "assets": {
+    "directory": "apps/web/dist-cf",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/health", "/socket.io", "/socket.io/*"]
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "ROOMS", "class_name": "MancalaRoom" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["MancalaRoom"] }],
+  "observability": { "enabled": false },
+  "send_metrics": false
+}
